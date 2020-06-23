@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" th:href="@{/layui/css/layui.css}">
+    <script th:src="@{/layui/layui.js}"></script>
+</head>
+<body>
+<form class="layui-form" action="" lay-filter="deptinfo" id="insertDept" style="display: none">
+    <div class="layui-form-item">
+        <label class="layui-form-label">id</label>
+        <div class="layui-input-block">
+            <input type="text" name="deptId" placeholder="请输入id" autocomplete="off"
+                   class="layui-input">
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">部门名称</label>
+        <div class="layui-input-inline">
+            <input type="text" name="deptName" required lay-verify="required" placeholder="请输入部门名称"
+                   autocomplete="off"
+                   class="layui-input">
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">创造者</label>
+        <div class="layui-input-inline">
+            <input type="text" name="createBy" required lay-verify="required" placeholder="请输入创建者名称" autocomplete="off"
+                   class="layui-input">
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">时间</label>
+        <div class="layui-input-inline">
+            <input type="text" name="createTime" required lay-verify="required" placeholder="请输入创建时间" autocomplete="off"
+                   class="layui-input">
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <div class="layui-input-block">
+            <button class="layui-btn" lay-submit lay-filter="formDemo">立即提交</button>
+            <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+        </div>
+    </div>
+</form>
+<div class="demoTable">
+    搜索ID：
+    <div class="layui-inline">
+        <input class="layui-input" name="id" id="iddept" autocomplete="off">
+    </div>
+    搜索部门名称：
+    <div class="layui-inline">
+        <input class="layui-input" name="id" id="namedept" autocomplete="off">
+    </div>
+    <button class="layui-btn" data-type="reload">搜索</button>
+</div>
+<table id="demo" lay-filter="test"></table>
+
+<script type="text/html" id="toolbarDemo">
+    <div class="layui-btn-container">
+        <button class="layui-btn layui-btn-sm" lay-event="addDept">新增</button>
+        <button class="layui-btn layui-btn-sm" lay-event="delete">删除</button>
+    </div>
+</script>
+<script type="text/html" id="barDemo">
+    <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+    <a class="layui-btn layui-btn-xs" lay-event="dele">删除</a>
+</script>
+<script>
+    layui.use(['layer', 'form', 'table', 'jquery'], function () {
+        var table = layui.table;
+        var form = layui.form;
+        var $ = layui.jquery;
+
+        //第一个实例
+        var myTable = table.render({
+            elem: '#demo'
+            , height: 312
+            , url: '/dept/selectDept' //数据接口
+            , page: true //开启分页
+            , limit: 3
+            , limits: [3, 5, 10]
+            , toolbar: '#toolbarDemo'
+            , cols: [
+                [ //表头
+                    {type: 'checkbox', fixed: 'left'}
+                    , {field: 'deptId', title: 'ID', width: 160, sort: true, fixed: 'left'}
+                    , {field: 'deptName', title: '用户名', width: 160}
+                    , {field: 'createBy', title: '创造者', width: 160, sort: true}
+                    , {field: 'createTime', title: '时间', width: 160}
+                    , {fixed: 'right', width: 165, align: 'center', toolbar: '#barDemo'}
+                ]]
+            , id: 'dept'
+        });
+
+        var $ = layui.$, active = {
+            reload: function () {
+                var iddept = $('#iddept');
+                var namedept = $('#namedept');
+
+                //执行重载
+                table.reload('dept', {
+                    page: {
+                        curr: 1 //重新从第 1 页开始
+                    }
+                    , where: {
+                        deptId: iddept.val(),
+                        deptName: namedept.val()
+                    }
+                }, 'data');
+            }
+        };
+
+        $('.demoTable .layui-btn').on('click', function () {
+            var type = $(this).data('type');
+            active[type] ? active[type].call(this) : '';
+        });
+
+        //监听头工具栏事件
+        table.on('toolbar(test)', function (obj) {
+            var checkStatus = table.checkStatus(obj.config.id)
+                , data = checkStatus.data; //获取选中的数据
+            switch (obj.event) {
+                case 'addDept':
+                    layer.open({
+                        title: '新增'
+                        , type: 1
+                        , content: $('#insertDept')
+                    });
+                    break;
+                case 'delete':
+                    if (data.length === 0) {
+                        layer.msg('请选择一行');
+                    } else {
+                        console.log(data)
+                        $.ajax({
+                            url: "/dept/deleteAll",
+                            data: JSON.stringify(data),
+                            contentType: "application/json",
+                            dataType: "json",
+                            type: "post",
+                            success: function (data) {
+                                layer.closeAll();
+                                layer.msg(data.message);
+                                myTable.reload();
+                            }
+                        })
+                    }
+                    break;
+            };
+        });
+        //监听提交
+        form.on('submit(formDemo)', function (data) {
+            $.ajax({
+                url: "/dept/insertDept",
+                data: data.field,
+                dataType: "json",
+                type: "post",
+                success: function (data) {
+                    layer.closeAll();
+                    layer.msg(data.message);
+                    document.getElementById("insertDept").reset();
+                    myTable.reload();
+                }
+            })
+            return false;
+        });
+        //监听行工具事件
+        table.on('tool(test)', function (obj) { //注：tool 是工具条事件名，test 是 table 原始容器的属性 lay-filter="对应的值"
+            var data = obj.data //获得当前行数据
+                , layEvent = obj.event; //获得 lay-event 对应的值
+            if (layEvent === 'dele') {
+                layer.confirm('真的删除行么', function (index) {
+                    deleteDept(data.deptId)
+                    layer.close(index);
+                });
+            } else if (layEvent === 'edit') {
+                layer.open({
+                    title: '修改'
+                    , type: 1
+                    , content: $('#insertDept')
+                });
+                selectByid(data.deptId)
+
+            }
+        });
+
+        function selectByid(deptId) {
+            $.ajax({
+                url: "/dept/selectDeptByid",
+                data: {deptId: deptId},
+                dataType: "json",
+                type: "post",
+                success: function (data) {
+                    console.log(data)
+                    form.val("deptinfo", { //formTest 即 class="layui-form" 所在元素属性 lay-filter="" 对应的值
+                        "deptId": data.deptId // "name": "value"
+                        , "deptName": data.deptName
+                        , "createBy": data.createBy
+                        , "createTime": data.createTime
+                    });
+                }
+            })
+        }
+
+        function deleteDept(deptId) {
+            $.ajax({
+                url: "/dept/delectDept",
+                data: {deptId: deptId},
+                dataType: "json",
+                type: "post",
+                success: function (data) {
+                    console.log(data)
+                    myTable.reload();
+                    layer.msg(data.message)
+                }
+            })
+        }
+    });
+</script>
+</body>
+</html>
